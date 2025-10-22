@@ -1,0 +1,1149 @@
+<template>
+  <div id="task-center">
+    <!-- 顶部导航 -->
+    <div class="header">
+      <span class="icon-back" @click="$router.back()"></span>
+      <span class="title">任务中心</span>
+    </div>
+
+    <!-- 金币余额 -->
+    <div class="coin-balance">
+      <div class="balance-card">
+        <div class="coin-icon">💰</div>
+        <div class="balance-info">
+          <div class="label">你的金币</div>
+          <div class="amount">{{userCoins}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 签到领奖励 -->
+    <div class="sign-in-section">
+      <div class="section-title">
+        <span class="icon">🎁</span>
+        <span>签到领奖励</span>
+      </div>
+      <div class="sign-in-card">
+        <div class="sign-days">
+          <div
+            v-for="day in 7"
+            :key="day"
+            :class="['day-item', {active: day === 1, completed: day < 1}]"
+          >
+            <div class="reward">+{{day === 1 ? 20 : (day * 10)}}</div>
+            <div class="coin-icon-small">🪙</div>
+            <div class="day-label">{{day === 1 ? '今日' : `第${day}天`}}</div>
+          </div>
+        </div>
+        <div class="sign-button" @click="handleSignIn">
+          <span>签到 + 20 奖励币</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 积分墙场景（如果有模版数据） -->
+    <div class="offerwall-section" v-if="offerwallTemplate && offerwallTemplate.scenes">
+      <!-- <div class="section-header">
+        <div class="section-title">
+          <span class="label">{{offerwallTemplate.config.title || '积分墙'}}</span>
+        </div>
+        <div class="section-subtitle">{{offerwallTemplate.config.subtitle || '完成任务赚取积分'}}</div>
+      </div> -->
+
+      <!-- 场景列表 -->
+      <div class="scene-list" v-if="offerwallTemplate.scenes.length > 0">
+        <!-- <div
+          v-for="scene in offerwallTemplate.scenes"
+          :key="scene.id"
+          class="scene-item"
+          @click="handleScene(scene)"
+        >
+          <div class="scene-icon">{{scene.icon || '🎯'}}</div>
+          <div class="scene-info">
+            <div class="scene-name">{{scene.name}}</div>
+            <div class="scene-desc">{{scene.description}}</div>
+          </div>
+          <div class="scene-arrow">→</div>
+        </div> -->
+      </div>
+    </div>
+
+    <!-- 福利中心任务 (taskTypeId = 1) -->
+    <div class="task-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="label">🎁 福利中心</span>
+        </div>
+        <div class="section-subtitle">完成任务领取丰厚奖励</div>
+      </div>
+
+      <!-- 任务列表 -->
+      <div v-if="welfareTasks && welfareTasks.length > 0" class="task-list">
+        <div
+          v-for="task in welfareTasks"
+          :key="'welfare-' + task.id"
+          :class="['task-item', {completed: task.completed}]"
+        >
+          <div class="task-icon">{{task.icon}}</div>
+          <div class="task-info">
+            <div class="task-title">{{task.title}}</div>
+            <div class="task-reward">+{{task.reward}} 🪙</div>
+            <div v-if="task.description" class="task-desc">{{task.description}}</div>
+          </div>
+          <div class="task-action">
+            <button
+              :class="['action-btn', {completed: task.completed}]"
+              @click.stop="handleTaskClick(task)">
+              {{task.completed ? '已完成' : '去完成'}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态提示 -->
+      <div v-else class="empty-state">
+        <div class="empty-image">
+          <img src="@/assets/images/empty-task.svg" alt="暂无任务" />
+        </div>
+        <div class="empty-text">暂无福利任务</div>
+      </div>
+    </div>
+
+    <!-- 新手专属任务 (taskTypeId = 2) -->
+    <div class="task-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="label">⭐ 新手专属任务</span>
+        </div>
+        <div class="section-subtitle">仅有一次机会</div>
+      </div>
+
+      <!-- 任务列表 -->
+      <div v-if="newbieTasks && newbieTasks.length > 0" class="task-list">
+        <div
+          v-for="task in newbieTasks"
+          :key="'newbie-' + task.id"
+          :class="['task-item', {completed: task.completed}]"
+        >
+          <div class="task-icon">{{task.icon}}</div>
+          <div class="task-info">
+            <div class="task-title">{{task.title}}</div>
+            <div class="task-reward">+{{task.reward}} 🪙</div>
+            <div v-if="task.description" class="task-desc">{{task.description}}</div>
+          </div>
+          <div class="task-action">
+            <button
+              :class="['action-btn', {completed: task.completed}]"
+              @click.stop="handleTaskClick(task)">
+              {{task.completed ? '已完成' : '去完成'}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态提示 -->
+      <div v-else class="empty-state">
+        <div class="empty-image">
+          <img src="@/assets/images/empty-task.svg" alt="暂无任务" />
+        </div>
+        <div class="empty-text">暂无新手任务</div>
+      </div>
+    </div>
+
+
+    <!-- 广告任务 (taskTypeId = 5) -->
+    <div class="task-section ad-task-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="label">📺 {{ adTaskTitle }}</span>
+        </div>
+        <div class="section-subtitle">{{ adTaskSubtitle }}</div>
+      </div>
+
+      <!-- 任务列表 -->
+      <div v-if="adTasks && adTasks.length > 0" class="task-list">
+        <div
+          v-for="task in adTasks"
+          :key="'ad-' + task.id"
+          :class="['task-item', {completed: task.completed}]"
+          :style="taskItemStyle"
+        >
+          <div class="task-icon" :style="taskIconStyle">
+            <img v-if="defaultImage" :src="defaultImage" alt="task icon" />
+            <span v-else>{{task.icon}}</span>
+          </div>
+          <div class="task-info">
+            <div class="task-title" :style="taskTitleStyle">{{task.title}}</div>
+            <div class="task-reward" :style="rewardStyle">🪙 +{{task.reward}}</div>
+            <div v-if="task.description" class="task-desc">{{task.description}}</div>
+          </div>
+          <div class="task-action">
+            <button
+              :class="['action-btn', {completed: task.completed}]"
+              :style="getButtonStyle(task)"
+              @click.stop="handleTaskClick(task)">
+              {{ task.completed ? '已完成' : '去完成' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态提示 -->
+      <div v-else class="empty-state">
+        <div class="empty-image">
+          <img src="@/assets/images/empty-task.svg" alt="暂无任务" />
+        </div>
+        <div class="empty-text">暂无广告任务</div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { Toast } from 'mint-ui'
+import {
+  startTask,
+  completeTask,
+  getMySigninStatus,
+  doSignin
+} from '@/api/points'
+// 导入积分墙API
+import {
+  getOfferwallTemplate,
+  getWelfareTasks,
+  getOfferwallConfig,  // ✅ 导入配置API
+  getUserCoins  // ✅ 导入金币查询API
+} from '@/api/offerwall'
+
+export default {
+  name: 'TaskCenter',
+  data() {
+    return {
+      userCoins: 0,
+      signedDays: 0,
+      hasSignedToday: false,
+      videoProgress: 0,
+      videoMilestones: [
+        { time: 3, reward: 5 },
+        { time: 5, reward: 10 },
+        { time: 8, reward: 10 },
+        { time: 12, reward: 10 },
+        { time: 15, reward: 10 }
+      ],
+      loading: false,
+      // 积分墙数据
+      offerwallTemplate: null, // 积分墙模版数据
+      offerwallConfig: null,   // 积分墙UI配置信息（从数据库读取的样式配置）
+      // 按任务类型分类的任务列表
+      welfareTasks: [],        // taskTypeId = 1, 福利中心任务
+      newbieTasks: [],         // taskTypeId = 2, 新手专属任务
+      adTasks: []              // taskTypeId = 5, 广告任务
+    }
+  },
+  computed: {
+    videoProgressPercent() {
+      return Math.min((this.videoProgress / 15) * 100, 100)
+    },
+
+    // 广告任务板块标题
+    adTaskTitle() {
+      return (this.offerwallConfig && this.offerwallConfig.adSection && this.offerwallConfig.adSection.title) || '广告任务'
+    },
+
+    // 广告任务板块副标题
+    adTaskSubtitle() {
+      return (this.offerwallConfig && this.offerwallConfig.adSection && this.offerwallConfig.adSection.subtitle) || '每天获取大量奖励币'
+    },
+
+    // 任务条目背景样式
+    taskItemStyle() {
+      // 优先使用 global.bottomBackground，如果没有则使用 taskCard.backgroundColor
+      if (this.offerwallConfig && this.offerwallConfig.global && this.offerwallConfig.global.bottomBackground) {
+        return {
+          backgroundColor: this.offerwallConfig.global.bottomBackground
+        }
+      }
+
+      // 降级方案：使用 taskCard.backgroundColor
+      if (this.offerwallConfig && this.offerwallConfig.adSection && this.offerwallConfig.adSection.taskCard) {
+        const taskCard = this.offerwallConfig.adSection.taskCard
+        return {
+          backgroundColor: taskCard.backgroundColor
+        }
+      }
+
+      // 默认背景色
+      return {
+        backgroundColor: '#16213e'
+      }
+    },
+
+    // 任务卡片图标样式
+    taskIconStyle() {
+      // 暂时返回空对象，图标样式可以用默认的
+      return {}
+    },
+
+    // 任务标题样式
+    taskTitleStyle() {
+      if (!this.offerwallConfig || !this.offerwallConfig.adSection || !this.offerwallConfig.adSection.taskTitle) return {}
+      const title = this.offerwallConfig.adSection.taskTitle
+      return {
+        color: title.color,
+        fontSize: title.fontSize,
+        fontWeight: title.fontWeight
+      }
+    },
+
+    // 奖励样式
+    rewardStyle() {
+      if (!this.offerwallConfig || !this.offerwallConfig.adSection || !this.offerwallConfig.adSection.reward) return {}
+      const reward = this.offerwallConfig.adSection.reward
+      return {
+        color: reward.color,
+        fontSize: reward.fontSize
+      }
+    },
+
+    // 按钮文字
+    buttonText() {
+      return (this.offerwallConfig && this.offerwallConfig.adSection && this.offerwallConfig.adSection.button && this.offerwallConfig.adSection.button.text) || '去完成'
+    },
+
+    // 已完成按钮文字
+    buttonCompletedText() {
+      return (this.offerwallConfig && this.offerwallConfig.adSection && this.offerwallConfig.adSection.button && this.offerwallConfig.adSection.button.completedText) || '已完成'
+    },
+
+    // 默认图片URL
+    defaultImage() {
+      return (this.offerwallConfig && this.offerwallConfig.images && this.offerwallConfig.images.defaultImage) || null
+    }
+  },
+  created() {
+    this.init()
+  },
+  methods: {
+    // 处理任务点击事件
+    handleTaskClick(task) {
+      // 如果任务已完成,提示用户
+      if (task.completed) {
+        Toast({
+          message: '该任务已完成',
+          position: 'middle',
+          duration: 1500
+        })
+        return
+      }
+
+      // 如果有跳转链接,则跳转
+      if (task.jumpUrl) {
+        console.log('跳转到任务链接:', task.jumpUrl)
+        window.location.href = task.jumpUrl
+        return
+      }
+
+      // 如果没有跳转链接,提示用户
+      Toast({
+        message: '该任务暂无跳转链接',
+        position: 'middle',
+        duration: 1500
+      })
+    },
+
+    async init() {
+      this.loading = true
+      try {
+        // 加载所有数据
+        await Promise.all([
+          this.loadUserPoints(),         // ✅ 加载用户金币（不需要token）
+          this.loadSigninStatus(),       // ✅ 加载签到状态（不需要token）
+          this.loadOfferwallConfig(),    // ✅ 加载积分墙UI配置
+          this.loadOfferwallTemplate(),  // 加载积分墙模版数据
+          this.loadWelfareTasks()        // 加载并分类所有任务（按 taskTypeId）
+        ])
+      } catch (error) {
+        console.error('初始化失败:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 新增：加载积分墙UI配置信息（从数据库读取样式配置）
+    async loadOfferwallConfig() {
+      try {
+        console.log('=== 开始加载积分墙UI配置（广告任务样式） ===')
+        const res = await getOfferwallConfig()
+        console.log('积分墙配置响应:', res)
+        console.log('完整响应数据:', JSON.stringify(res, null, 2))
+
+        // 处理成功响应且有数据
+        if (res.code === 200 && res.data) {
+          this.offerwallConfig = res.data
+          console.log('✅ 积分墙配置加载成功')
+          console.log('offerwallConfig.adSection:', this.offerwallConfig.adSection)
+          console.log('offerwallConfig.adSection.taskCard:', this.offerwallConfig.adSection && this.offerwallConfig.adSection.taskCard)
+          console.log('offerwallConfig.global:', this.offerwallConfig.global)
+
+          // 应用样式配置
+          this.applyThemeConfig(res.data)
+        }
+        // 处理无数据的情况（数据库中没有配置）
+        else if (res.code === 200 && !res.data) {
+          console.log('⚠️ 数据库无样式配置，使用默认样式')
+          this.offerwallConfig = null
+        }
+        // 处理错误响应
+        else {
+          console.warn('⚠️ 积分墙配置响应异常:', res)
+          this.offerwallConfig = null
+        }
+      } catch (error) {
+        console.error('❌ 获取积分墙配置失败:', error)
+        // 失败时不报错，静默降级，使用默认样式
+        this.offerwallConfig = null
+        console.log('💡 使用默认样式')
+      }
+    },
+
+    // 应用主题配置
+    applyThemeConfig(config) {
+      if (!config) {
+        console.log('无样式配置，使用默认样式')
+        return
+      }
+
+      // 打印样式配置，方便调试
+      console.log('成功加载样式配置:')
+      console.log('- 主题:', config.theme)
+      console.log('- 广告任务板块:', config.adSection)
+      if (config.adSection) {
+        console.log('  - 标题:', config.adSection.title)
+        console.log('  - 标题颜色:', config.adSection.titleColor)
+        console.log('  - 副标题:', config.adSection.subtitle)
+        console.log('  - 背景色:', config.adSection.backgroundColor)
+        console.log('  - 边框色:', config.adSection.borderColor)
+        console.log('  - 任务卡片样式:', config.adSection.taskCard)
+        if (config.adSection.taskCard) {
+          console.log('    - 任务条目背景色(task_item_bg):', config.adSection.taskCard.backgroundColor)
+        }
+        console.log('  - 任务标题样式:', config.adSection.taskTitle)
+        console.log('  - 奖励样式:', config.adSection.reward)
+        console.log('  - 按钮样式:', config.adSection.button)
+      }
+      console.log('- 全局样式:', config.global)
+      if (config.global) {
+        console.log('  - 底部背景色(bottomBackground):', config.global.bottomBackground)
+        console.log('  💡 使用 bottomBackground 作为 .task-item 背景色')
+      }
+    },
+
+    // 获取任务卡片样式
+    getTaskCardStyle(task) {
+      if (!this.offerwallConfig || !this.offerwallConfig.adSection || !this.offerwallConfig.adSection.taskCard) return {}
+      const card = this.offerwallConfig.adSection.taskCard
+      return {
+        backgroundColor: card.backgroundColor,
+        borderRadius: card.borderRadius,
+        padding: card.padding
+      }
+    },
+
+    // 获取按钮样式
+    getButtonStyle(task) {
+      if (!this.offerwallConfig || !this.offerwallConfig.adSection || !this.offerwallConfig.adSection.button) return {}
+      const button = this.offerwallConfig.adSection.button
+
+      // 根据任务完成状态返回不同样式
+      if (task.completed) {
+        return {
+          backgroundColor: button.completedBackgroundColor || '#999',
+          color: button.textColor,
+          borderRadius: button.borderRadius,
+          padding: button.padding
+        }
+      } else {
+        return {
+          backgroundColor: button.backgroundColor,
+          color: button.textColor,
+          borderRadius: button.borderRadius,
+          padding: button.padding
+        }
+      }
+    },
+
+    // 新增：加载积分墙模版数据
+    async loadOfferwallTemplate() {
+      try {
+        console.log('=== 开始加载积分墙模版数据 ===')
+        const res = await getOfferwallTemplate()
+        console.log('积分墙模版数据响应:', res)
+
+        if (res.code === 200 && res.data) {
+          this.offerwallTemplate = res.data
+          console.log('积分墙模版数据加载成功:')
+          console.log('- 场景列表:', res.data.scenes)
+          console.log('- 任务类型:', res.data.taskTypes)
+          console.log('- 配置信息:', res.data.config)
+
+          Toast({
+            message: '积分墙模版加载成功',
+            position: 'middle',
+            duration: 1500
+          })
+        } else {
+          console.warn('积分墙模版数据格式异常:', res)
+        }
+      } catch (error) {
+        console.error('获取积分墙模版数据失败:', error)
+        Toast({
+          message: '加载积分墙模版失败',
+          position: 'middle',
+          duration: 1500
+        })
+      }
+    },
+
+    // 新增：加载福利中心任务列表（按 taskTypeId 分类）
+    async loadWelfareTasks() {
+      try {
+        console.log('=== 开始加载福利中心任务列表 ===')
+        const res = await getWelfareTasks({ page: 1, limit: 100 })
+        console.log('福利中心任务列表响应:', res)
+
+        if (res.code === 200 && res.data) {
+          const allTasks = res.data.data || []
+          console.log('任务列表加载成功，总任务数:', allTasks.length)
+
+          // 按 taskTypeId 分类任务
+          this.welfareTasks = []  // taskTypeId = 1, 福利中心任务
+          this.newbieTasks = []   // taskTypeId = 2, 新手专属任务
+          this.adTasks = []       // taskTypeId = 5, 广告任务
+
+          allTasks.forEach(task => {
+            const taskItem = {
+              id: task.id,
+              icon: task.icon || this.getDefaultIcon(task.taskTypeId),
+              title: task.title,
+              reward: task.rewardPoints,
+              completed: task.isCompleted || false,
+              jumpUrl: task.jumpUrl || '',
+              pageDuration: task.pageDuration || 0,
+              description: task.description || ''
+            }
+
+            // 根据 taskTypeId 分类
+            if (task.taskTypeId === 1) {
+              // 福利中心任务
+              this.welfareTasks.push(taskItem)
+            } else if (task.taskTypeId === 2) {
+              // 新手专属任务
+              this.newbieTasks.push(taskItem)
+            } else if (task.taskTypeId === 5) {
+              // 广告任务
+              this.adTasks.push(taskItem)
+            }
+          })
+
+          console.log('任务分类完成:')
+          console.log('- 福利中心任务(taskTypeId=1):', this.welfareTasks.length)
+          console.log('- 新手专属任务(taskTypeId=2):', this.newbieTasks.length)
+          console.log('- 广告任务(taskTypeId=5):', this.adTasks.length)
+
+          Toast({
+            message: `加载 ${allTasks.length} 个任务`,
+            position: 'middle',
+            duration: 1500
+          })
+        } else {
+          console.warn('福利中心任务列表格式异常:', res)
+        }
+      } catch (error) {
+        console.error('获取福利中心任务列表失败:', error)
+        Toast({
+          message: '加载福利任务失败',
+          position: 'middle',
+          duration: 1500
+        })
+      }
+    },
+
+    // 根据任务类型返回默认图标
+    getDefaultIcon(taskTypeId) {
+      const iconMap = {
+        1: '🎁', // 福利中心
+        2: '⭐', // 新手专属
+        5: '📺'  // 广告任务
+      }
+      return iconMap[taskTypeId] || '📋'
+    },
+
+    // 加载用户金币（从 film_api）
+    async loadUserPoints() {
+      try {
+        console.log('[TaskCenter] 开始加载用户金币...')
+
+        // 使用金币系统而不是积分系统
+        const res = await getUserCoins()
+
+        console.log('[TaskCenter] getUserCoins 响应:', res)
+        console.log('[TaskCenter] success_code:', res.success_code)
+        console.log('[TaskCenter] data:', res.data)
+
+        if (res.success_code === 200 && res.data) {
+          // ✅ 使用 coin_balance（总金币余额）
+          this.userCoins = res.data.coin_balance || 0
+          console.log('[TaskCenter] ✅ 金币加载成功，总金币:', this.userCoins)
+          console.log('[TaskCenter] 数据详情:', {
+            coin_balance: res.data.coin_balance,
+            total_earned: res.data.total_earned,
+            continuous_days: res.data.continuous_days
+          })
+        } else {
+          console.warn('[TaskCenter] ⚠️ 响应格式不正确或无数据')
+          this.userCoins = 0
+        }
+      } catch (error) {
+        console.error('[TaskCenter] ❌ 获取金币失败:', error)
+        console.error('[TaskCenter] 错误详情:', {
+          message: error.message,
+          response: error.response && error.response.data,
+          status: error.response && error.response.status
+        })
+        // 失败时设置为 0，避免显示错误
+        this.userCoins = 0
+      }
+    },
+
+    // 加载签到状态（金币系统）
+    async loadSigninStatus() {
+      try {
+        console.log('[TaskCenter] 🔍 检查签到状态...')
+        const res = await getMySigninStatus()
+        // film_api 返回格式: { success_code: 200, checked: true/false, data: { last_checkin_date, continuous_days } }
+        if (res.success_code === 200) {
+          this.hasSignedToday = res.checked || false
+          if (res.data) {
+            this.signedDays = res.data.continuous_days || 0
+          }
+          console.log('[TaskCenter] ✅ 签到状态:', {
+            hasSignedToday: this.hasSignedToday,
+            signedDays: this.signedDays,
+            lastCheckinDate: res.data && res.data.last_checkin_date
+          })
+        }
+      } catch (error) {
+        console.error('[TaskCenter] ❌ 获取签到状态失败:', error)
+        this.hasSignedToday = false
+      }
+    },
+
+
+
+    // 签到
+    async handleSignIn() {
+      if (this.hasSignedToday) {
+        Toast({
+          message: '今日已签到',
+          position: 'middle',
+          duration: 1500
+        })
+        return
+      }
+
+      try {
+        const res = await doSignin()
+        // film_api 返回格式: { success_code: 200, data: { reward_coins, continuous_days, ... } }
+        if (res.success_code === 200 && res.data) {
+          Toast({
+            message: res.data.message || `签到成功！获得 ${res.data.reward_coins} 金币`,
+            position: 'middle',
+            duration: 2000
+          })
+          this.hasSignedToday = true
+          this.signedDays = res.data.continuous_days || 0
+          // 刷新金币余额
+          this.loadUserPoints()
+        }
+      } catch (error) {
+        console.error('签到失败:', error)
+        Toast({
+          message: error.message || '签到失败，请重试',
+          position: 'middle',
+          duration: 2000
+        })
+      }
+    },
+
+    // 处理任务
+    async handleTask(task) {
+      if (task.completed || task.progress >= task.total) {
+        Toast({
+          message: '该任务已完成',
+          position: 'middle',
+          duration: 1500
+        })
+        return
+      }
+
+      try {
+        // 开始任务
+        await startTask(task.id)
+
+        // 这里应该跳转到任务执行页面
+        // 为了演示，直接完成任务
+        Toast({
+          message: '正在执行任务...',
+          position: 'middle',
+          duration: 1000
+        })
+
+        // 模拟任务完成（实际应该根据任务类型跳转到对应页面）
+        setTimeout(async() => {
+          try {
+            const res = await completeTask(task.id)
+            Toast({
+              message: `任务完成！获得 ${res.data.points} 金币`,
+              position: 'middle',
+              duration: 2000
+            })
+            task.completed = true
+            // 刷新积分
+            this.loadUserPoints()
+          } catch (error) {
+            console.error('完成任务失败:', error)
+          }
+        }, 1500)
+      } catch (error) {
+        console.error('开始任务失败:', error)
+      }
+    },
+
+    // 处理视频任务
+    async handleVideoTask() {
+      try {
+        // 获取视频广告
+        const res = await getClientAds({ adType: 'rewarded_video', status: 'active' })
+        if (res.data && res.data.length > 0) {
+          const videoAd = res.data[0]
+
+          Toast({
+            message: '正在加载视频...',
+            position: 'middle',
+            duration: 1000
+          })
+
+          // 模拟观看视频（实际应该调用广告SDK）
+          setTimeout(async() => {
+            try {
+              const watchRes = await watchAd(videoAd.id, { duration: 60 })
+              Toast({
+                message: `观看完成！获得 ${watchRes.data.points} 金币`,
+                position: 'middle',
+                duration: 2000
+              })
+              this.videoProgress += 1
+              // 刷新积分
+              this.loadUserPoints()
+            } catch (error) {
+              console.error('观看广告失败:', error)
+            }
+          }, 2000)
+        } else {
+          Toast({
+            message: '暂无可用视频',
+            position: 'middle',
+            duration: 1500
+          })
+        }
+      } catch (error) {
+        console.error('获取视频广告失败:', error)
+      }
+    },
+
+    // 新增：处理场景点击
+    handleScene(scene) {
+      console.log('点击场景:', scene)
+      Toast({
+        message: `进入场景：${scene.name}`,
+        position: 'middle',
+        duration: 1500
+      })
+      // 可以跳转到场景详情页或任务列表页
+      // this.$router.push({ path: '/offerwall/scene', query: { sceneId: scene.id } })
+    },
+
+    // 新增：处理福利任务点击
+    async handleWelfareTask(task) {
+      console.log('点击福利任务:', task)
+
+      if (task.isCompleted) {
+        Toast({
+          message: '该任务已完成',
+          position: 'middle',
+          duration: 1500
+        })
+        return
+      }
+
+      // 可以跳转到任务详情页或直接执行任务
+      Toast({
+        message: `开始任务：${task.title}`,
+        position: 'middle',
+        duration: 1500
+      })
+
+      // 这里可以调用积分墙的开始任务接口
+      // 例如: await startOfferwallTask(task.id)
+    }
+  }
+}
+</script>
+
+<style scoped lang="stylus">
+#task-center
+  width 100%
+  max-width 100vw
+  min-height 100vh
+  background-color #1a1a2e
+  color #fff
+  padding-bottom 1rem
+  overflow-x hidden
+  position relative
+  box-sizing border-box
+
+  .header
+    position fixed
+    top 0
+    left 0
+    right 0
+    height 1rem
+    background-color #16213e
+    display flex
+    align-items center
+    padding 0 .3rem
+    z-index 100
+    .icon-back
+      font-size .5rem
+      cursor pointer
+    .title
+      flex 1
+      text-align center
+      font-size .4rem
+      font-weight bold
+      margin-right .5rem
+
+  .coin-balance
+    margin-top 1.2rem
+    padding .4rem
+    box-sizing border-box
+    .balance-card
+      background linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+      border-radius .3rem
+      padding .5rem
+      display flex
+      align-items center
+      box-shadow 0 .1rem .3rem rgba(0,0,0,0.3)
+      box-sizing border-box
+      .coin-icon
+        font-size 1.5rem
+        margin-right .3rem
+      .balance-info
+        .label
+          font-size .28rem
+          opacity 0.8
+        .amount
+          font-size .8rem
+          font-weight bold
+          margin-top .1rem
+
+  .sign-in-section
+    padding .3rem .4rem
+    box-sizing border-box
+    .section-title
+      font-size .35rem
+      font-weight bold
+      margin-bottom .3rem
+      display flex
+      align-items center
+      .icon
+        font-size .4rem
+        margin-right .2rem
+    .sign-in-card
+      background-color #16213e
+      border-radius .3rem
+      padding .4rem
+      box-sizing border-box
+      overflow hidden
+      .sign-days
+        display flex
+        justify-content space-between
+        margin-bottom .4rem
+        overflow hidden
+        .day-item
+          flex 1
+          display flex
+          flex-direction column
+          align-items center
+          padding .2rem
+          border-radius .2rem
+          position relative
+          &.active
+            background-color rgba(221, 39, 39, 0.2)
+            border .02rem solid #dd2727
+          &.completed
+            opacity 0.5
+          .reward
+            font-size .3rem
+            font-weight bold
+            color #ffb400
+          .coin-icon-small
+            font-size .4rem
+            margin .1rem 0
+          .day-label
+            font-size .24rem
+            opacity 0.7
+      .sign-button
+        background linear-gradient(135deg, #f093fb 0%, #f5576c 100%)
+        color #fff
+        text-align center
+        padding .35rem
+        border-radius .5rem
+        font-size .35rem
+        font-weight bold
+        cursor pointer
+        box-shadow 0 .1rem .2rem rgba(245, 87, 108, 0.4)
+        &:active
+          transform scale(0.98)
+
+  .offerwall-section
+    padding .3rem .4rem
+    margin-bottom .3rem
+    box-sizing border-box
+    .section-header
+      margin-bottom .3rem
+      .section-title
+        font-size .35rem
+        font-weight bold
+        margin-bottom .15rem
+        .label
+          color #fff
+      .section-subtitle
+        font-size .26rem
+        color #999
+
+    .scene-list
+      display flex
+      flex-direction column
+      gap .2rem
+      .scene-item
+        background-color #16213e
+        border-radius .3rem
+        padding .3rem
+        display flex
+        align-items center
+        cursor pointer
+        transition all 0.3s
+        &:active
+          transform scale(0.98)
+          background-color #1a2642
+        .scene-icon
+          font-size .8rem
+          margin-right .3rem
+          flex-shrink 0
+        .scene-info
+          flex 1
+          min-width 0
+          .scene-name
+            font-size .32rem
+            font-weight bold
+            margin-bottom .1rem
+          .scene-desc
+            font-size .24rem
+            color #999
+            overflow hidden
+            text-overflow ellipsis
+            white-space nowrap
+        .scene-arrow
+          font-size .4rem
+          color #999
+          flex-shrink 0
+          margin-left .2rem
+
+  .task-section
+    padding .3rem .4rem
+    margin-bottom .3rem
+    box-sizing border-box
+    .section-header
+      margin-bottom .3rem
+      .section-title
+        font-size .35rem
+        font-weight bold
+        margin-bottom .15rem
+        .label
+          color #fff
+      .section-subtitle
+        font-size .26rem
+        color #999
+
+    .video-task
+      background-color #16213e
+      border-radius .3rem
+      padding .3rem
+      margin-bottom .3rem
+      box-sizing border-box
+      overflow hidden
+      .video-header
+        display flex
+        align-items center
+        margin-bottom .3rem
+        flex-wrap wrap
+        .video-icon
+          font-size .8rem
+          margin-right .2rem
+        .video-info
+          flex 1
+          min-width 0
+          overflow hidden
+          .video-title
+            font-size .32rem
+            font-weight bold
+            margin-bottom .1rem
+            word-wrap break-word
+            overflow-wrap break-word
+          .video-subtitle
+            font-size .24rem
+            color #ffb400
+            word-wrap break-word
+            overflow-wrap break-word
+        .video-btn
+          background-color #dd2727
+          color #fff
+          border none
+          padding .2rem .4rem
+          border-radius .4rem
+          font-size .28rem
+          cursor pointer
+          white-space nowrap
+          flex-shrink 0
+      .video-progress
+        display flex
+        justify-content space-between
+        margin-bottom .2rem
+        overflow hidden
+        .milestone
+          flex 1
+          display flex
+          flex-direction column
+          align-items center
+          padding .15rem
+          opacity 0.5
+          min-width 0
+          &.active
+            opacity 1
+          .gift-icon
+            font-size .5rem
+          .reward-text
+            font-size .24rem
+            color #ffb400
+            margin .05rem 0
+          .time-text
+            font-size .2rem
+            color #999
+      .progress-bar
+        width 100%
+        height .15rem
+        background-color rgba(255,255,255,0.1)
+        border-radius .1rem
+        overflow hidden
+        .progress-fill
+          height 100%
+          background linear-gradient(90deg, #f093fb 0%, #f5576c 100%)
+          border-radius .1rem
+          transition width 0.3s ease
+
+    .task-list
+      .task-item
+        background-color #16213e
+        border-radius .3rem
+        padding .3rem
+        margin-bottom .2rem
+        display flex
+        align-items center
+        cursor pointer
+        transition all 0.3s
+        box-sizing border-box
+        overflow hidden
+        &:active
+          transform scale(0.98)
+        &.completed
+          opacity 0.6
+        .task-icon
+          font-size .8rem
+          margin-right .3rem
+          flex-shrink 0
+          width .8rem
+          height .8rem
+          display flex
+          align-items center
+          justify-content center
+          img
+            width 100%
+            height 100%
+            object-fit cover
+            border-radius .1rem
+        .task-info
+          flex 1
+          min-width 0
+          overflow hidden
+          .task-title
+            font-size .3rem
+            margin-bottom .1rem
+            word-wrap break-word
+            overflow-wrap break-word
+          .task-reward
+            font-size .26rem
+            color #ffb400
+          .task-desc
+            font-size .22rem
+            color #999
+            margin-top .1rem
+            word-wrap break-word
+            overflow-wrap break-word
+        .task-action
+          flex-shrink 0
+          margin-left .2rem
+          display flex
+          align-items center
+          justify-content center
+          .action-btn
+            background-color #dd2727
+            color #fff
+            border none
+            padding .2rem .4rem
+            border-radius .4rem
+            font-size .26rem
+            cursor pointer
+            white-space nowrap
+            &.completed
+              background-color #666
+              color #ccc
+
+  // 空状态样式
+  .empty-state
+    text-align center
+    padding 1.5rem 1rem
+    color #999
+    .empty-image
+      margin-bottom .4rem
+      img
+        width 3rem
+        height 3rem
+        opacity 0.6
+    .empty-icon
+      font-size 1.2rem
+      margin-bottom .3rem
+    .empty-text
+      font-size .28rem
+      color #888
+</style>

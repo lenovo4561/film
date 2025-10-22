@@ -1,0 +1,31 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="100" cy="100" r="90" fill="#2a2a3e" opacity="0.3"/>
+
+  <!-- 任务列表图标 -->
+  <rect x="60" y="60" width="80" height="90" rx="8" fill="#3a3a5e" opacity="0.6"/>
+
+  <!-- 复选框 1 -->
+  <rect x="70" y="75" width="12" height="12" rx="2" stroke="#666" stroke-width="2" fill="none"/>
+  <line x1="72" y1="81" x2="75" y2="84" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+  <line x1="75" y1="84" x2="80" y2="77" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 任务线 1 -->
+  <line x1="88" y1="81" x2="120" y2="81" stroke="#666" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 复选框 2 -->
+  <rect x="70" y="95" width="12" height="12" rx="2" stroke="#666" stroke-width="2" fill="none"/>
+
+  <!-- 任务线 2 -->
+  <line x1="88" y1="101" x2="115" y2="101" stroke="#666" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 复选框 3 -->
+  <rect x="70" y="115" width="12" height="12" rx="2" stroke="#666" stroke-width="2" fill="none"/>
+
+  <!-- 任务线 3 -->
+  <line x1="88" y1="121" x2="110" y2="121" stroke="#666" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 问号 -->
+  <circle cx="100" cy="150" r="15" fill="#555" opacity="0.5"/>
+  <text x="100" y="158" font-size="20" fill="#999" text-anchor="middle" font-weight="bold">?</text>
+</svg>

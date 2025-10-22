@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>积分系统认证测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    h2 {
+      color: #666;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:active {
+      background: #3d8b40;
+    }
+    .danger {
+      background: #f44336;
+    }
+    .danger:hover {
+      background: #da190b;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 400px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .info {
+      background: #e3f2fd;
+      padding: 10px;
+      border-left: 4px solid #2196F3;
+      margin-bottom: 15px;
+    }
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .status.ok {
+      background: #4CAF50;
+      color: white;
+    }
+    .status.fail {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔐 积分系统认证测试工具</h1>
+
+  <div class="info">
+    <strong>当前状态：</strong>
+    <span id="tokenStatus"></span>
+  </div>
+
+  <!-- 登录区域 -->
+  <div class="section">
+    <h2>1. 用户登录</h2>
+    <div>
+      <input type="text" id="username" placeholder="用户名" value="admin">
+      <input type="password" id="password" placeholder="密码" value="123456">
+      <button onclick="testLogin()">🔑 登录</button>
+      <button onclick="checkToken()">🔍 检查Token</button>
+      <button class="danger" onclick="clearToken()">🗑️ 清空Token</button>
+    </div>
+    <div id="loginResult"></div>
+  </div>
+
+  <!-- 积分查询区域 -->
+  <div class="section">
+    <h2>2. 获取用户积分</h2>
+    <div>
+      <button onclick="testGetPoints()">💰 获取积分</button>
+      <button onclick="testGetPointsLogs()">📋 积分记录</button>
+    </div>
+    <div id="pointsResult"></div>
+  </div>
+
+  <!-- 金币查询区域 -->
+  <div class="section">
+    <h2>3. 获取用户金币（film_api）</h2>
+    <div>
+      <button onclick="testGetCoins()">🪙 获取金币</button>
+      <button onclick="testCheckin()">✅ 签到领金币</button>
+    </div>
+    <div id="coinsResult"></div>
+  </div>
+
+  <script>
+    // 更新Token状态
+    function updateTokenStatus() {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      const statusEl = document.getElementById('tokenStatus');
+
+      if (token) {
+        statusEl.innerHTML = `
+          <span class="status ok">已登录</span>
+          User ID: ${userId || '未知'}
+        `;
+      } else {
+        statusEl.innerHTML = `
+          <span class="status fail">未登录</span>
+          需要先登录获取Token
+        `;
+      }
+    }
+
+    // 登录测试
+    async function testLogin() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (data.code === 200) {
+          // 保存token
+          localStorage.setItem('token', data.data.token);
+          localStorage.setItem('userId', data.data.user.id);
+
+          document.getElementById('loginResult').innerHTML = `
+            <pre class="success">✅ 登录成功！
+
+Token: ${data.data.token.substring(0, 50)}...
+User ID: ${data.data.user.id}
+Username: ${data.data.user.username}
+
+已保存到 localStorage</pre>
+          `;
+
+          updateTokenStatus();
+        } else {
+          document.getElementById('loginResult').innerHTML = `
+            <pre class="error">❌ 登录失败
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('loginResult').innerHTML = `
+          <pre class="error">❌ 请求失败
+
+${error.message}
+
+确保 server (3000端口) 已启动：
+cd server && npm run dev</pre>
+        `;
+      }
+    }
+
+    // 检查Token
+    function checkToken() {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+
+      if (token) {
+        document.getElementById('loginResult').innerHTML = `
+          <pre class="success">✅ Token 存在
+
+UserId: ${userId}
+Token: ${token.substring(0, 50)}...
+
+完整Token:
+${token}</pre>
+        `;
+      } else {
+        document.getElementById('loginResult').innerHTML = `
+          <pre class="error">❌ Token 不存在
+
+localStorage 中没有 token
+请先登录</pre>
+        `;
+      }
+    }
+
+    // 清空Token
+    function clearToken() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      document.getElementById('loginResult').innerHTML = `
+        <pre class="success">✅ Token 已清空</pre>
+      `;
+      updateTokenStatus();
+    }
+
+    // 获取积分
+    async function testGetPoints() {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        document.getElementById('pointsResult').innerHTML = `
+          <pre class="error">❌ 请先登录获取token</pre>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3000/api/client/points', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await res.json();
+
+        if (data.code === 200) {
+          document.getElementById('pointsResult').innerHTML = `
+            <pre class="success">✅ 获取积分成功
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          document.getElementById('pointsResult').innerHTML = `
+            <pre class="error">❌ 获取积分失败
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('pointsResult').innerHTML = `
+          <pre class="error">❌ 请求失败
+
+${error.message}</pre>
+        `;
+      }
+    }
+
+    // 获取积分记录
+    async function testGetPointsLogs() {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        document.getElementById('pointsResult').innerHTML = `
+          <pre class="error">❌ 请先登录获取token</pre>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3000/api/client/points/logs', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await res.json();
+
+        if (data.code === 200) {
+          document.getElementById('pointsResult').innerHTML = `
+            <pre class="success">✅ 获取积分记录成功
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          document.getElementById('pointsResult').innerHTML = `
+            <pre class="error">❌ 获取积分记录失败
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('pointsResult').innerHTML = `
+          <pre class="error">❌ 请求失败
+
+${error.message}</pre>
+        `;
+      }
+    }
+
+    // 获取金币 (film_api)
+    async function testGetCoins() {
+      const userId = localStorage.getItem('userId') || '55';
+
+      try {
+        const res = await fetch(`http://localhost:4000/api/getUserCoins?userId=${userId}`, {
+          method: 'GET',
+          credentials: 'include'  // 发送 cookies
+        });
+
+        const data = await res.json();
+
+        if (data.success_code === 200) {
+          document.getElementById('coinsResult').innerHTML = `
+            <pre class="success">✅ 获取金币成功
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          document.getElementById('coinsResult').innerHTML = `
+            <pre class="error">❌ 获取金币失败
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('coinsResult').innerHTML = `
+          <pre class="error">❌ 请求失败
+
+${error.message}
+
+确保 film_api (4000端口) 已启动：
+cd film_api && npm start</pre>
+        `;
+      }
+    }
+
+    // 签到领金币
+    async function testCheckin() {
+      const userId = localStorage.getItem('userId') || '55';
+
+      try {
+        const res = await fetch('http://localhost:4000/api/userCheckin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',  // 发送 cookies
+          body: JSON.stringify({ userId })
+        });
+
+        const data = await res.json();
+
+        if (data.success_code === 200) {
+          document.getElementById('coinsResult').innerHTML = `
+            <pre class="success">✅ 签到成功
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          document.getElementById('coinsResult').innerHTML = `
+            <pre class="error">❌ 签到失败
+
+${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('coinsResult').innerHTML = `
+          <pre class="error">❌ 请求失败
+
+${error.message}</pre>
+        `;
+      }
+    }
+
+    // 页面加载时检查状态
+    updateTokenStatus();
+  </script>
+</body>
+</html>
