@@ -24,7 +24,7 @@
         @click="goToTaskDetail(task)"
       >
         <div class="task-icon">
-          <img v-if="task.icon" :src="server + task.icon" alt="任务图标">
+          <img v-if="task.icon" :src="server + task.icon" alt="任务图标" />
           <div v-else class="default-icon">📋</div>
         </div>
 
@@ -32,7 +32,9 @@
           <div class="task-title">{{ task.title }}</div>
           <div class="task-desc">{{ task.description }}</div>
           <div class="task-type">
-            <span class="type-tag">{{ task.taskType ? task.taskType.name : '普通任务' }}</span>
+            <span class="type-tag">{{
+              task.taskType ? task.taskType.name : "普通任务"
+            }}</span>
             <span v-if="task.isNewbie" class="newbie-tag">新手</span>
           </div>
         </div>
@@ -41,7 +43,12 @@
           <div class="points">+{{ task.points }}</div>
           <div class="points-label">积分</div>
           <div v-if="task.isCompleted" class="completed-badge">已完成</div>
-          <div v-else-if="task.userStatus === 'in_progress'" class="progress-badge">进行中</div>
+          <div
+            v-else-if="task.userStatus === 'in_progress'"
+            class="progress-badge"
+          >
+            进行中
+          </div>
         </div>
       </div>
     </div>
@@ -60,78 +67,78 @@
 </template>
 
 <script>
-import { getOfferwallTasks, getUserCoins } from '@/api/offerwall'
-import { Indicator, Toast } from 'mint-ui'
+import { getOfferwallTasks, getUserCoins } from "@/api/offerwall";
+import { Indicator, Toast } from "mint-ui";
 
 export default {
-  name: 'OfferwallTasks',
+  name: "OfferwallTasks",
   data() {
     return {
-      server: 'http://localhost:4000',
+      server: "http://localhost:4000",
       taskList: [],
       loading: false,
       userCoins: 0 // 用户金币余额
-    }
+    };
   },
   created() {
-    this.loadUserCoins()
-    this.loadTasks()
+    this.loadUserCoins();
+    this.loadTasks();
   },
   methods: {
     // 加载用户金币
     async loadUserCoins() {
       try {
-        const res = await getUserCoins()
-        console.log('用户金币:', res)
+        const res = await getUserCoins();
+        console.log("用户金币:", res);
 
         if ((res.success_code === 200 || res.code === 200) && res.data) {
-          this.userCoins = res.data.coin_balance || res.data.balance || 0
+          this.userCoins = res.data.coin_balance || res.data.balance || 0;
         }
       } catch (error) {
-        console.error('加载用户金币失败:', error)
+        console.error("加载用户金币失败:", error);
         // 不显示错误提示，保持用户体验
       }
     },
     // 加载任务列表
     async loadTasks() {
-      this.loading = true
-      Indicator.open('加载中...')
+      this.loading = true;
+      Indicator.open("加载中...");
 
       try {
-        const res = await getOfferwallTasks()
-        console.log('任务列表:', res)
+        const res = await getOfferwallTasks();
+        console.log("任务列表:", res);
 
         if (res.code === 200) {
-          this.taskList = res.data || []
+          this.taskList = res.data || [];
         } else {
           Toast({
-            message: res.message || '加载失败',
-            position: 'middle',
+            message: res.message || "加载失败",
+            position: "middle",
             duration: 2000
-          })
+          });
         }
       } catch (error) {
-        console.error('加载任务列表失败:', error)
+        console.error("加载任务列表失败:", error);
         Toast({
-          message: '加载任务列表失败',
-          position: 'middle',
+          message: "加载任务列表失败",
+          position: "middle",
           duration: 2000
-        })
+        });
       } finally {
-        this.loading = false
-        Indicator.close()
+        this.loading = false;
+        Indicator.close();
       }
     },
 
     // 跳转任务详情
     goToTaskDetail(task) {
       this.$router.push({
-        path: '/offerwall/task-detail',
+        path: "/offerwall/task-detail",
         query: { id: task.id }
-      })
+      });
     }
   }
-}
+};
 </script>
 
 <style scoped>
