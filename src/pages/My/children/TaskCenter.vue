@@ -403,32 +403,74 @@ export default {
   methods: {
     // 动态生成任务标题（包含进度）
     getTaskTitle(task) {
-      if (!task.title) return "";
+      console.log(
+        `[TaskCenter] 🎯 生成标题: ID=${task.id}, title="${
+          task.title
+        }", i18nContent="${task.i18nContent}", progress=${
+          task.progress
+        }, targetCount=${task.targetCount}`
+      );
 
-      // 检查标题中是否包含括号格式的进度信息，如 "(0/5)" 或 "(4/5)"
+      // 基础标题（优先使用 i18nContent 的英文内容）
+      let baseTitle = task.title || "";
+
+      // 1️⃣ 优先判断 i18nContent 字段是否有值
+      if (task.i18nContent) {
+        try {
+          // 解析 i18nContent JSON 字符串
+          const i18nData =
+            typeof task.i18nContent === "string"
+              ? JSON.parse(task.i18nContent)
+              : task.i18nContent;
+
+          console.log(`[TaskCenter] 📖 i18nContent 解析结果:`, i18nData);
+
+          // 优先使用英文内容（en 字段）
+          if (i18nData.en) {
+            baseTitle = i18nData.en;
+            console.log(`[TaskCenter] ✅ 使用英文标题: "${baseTitle}"`);
+          } else if (i18nData.zh_CN) {
+            // 如果没有英文，使用中文
+            baseTitle = i18nData.zh_CN;
+            console.log(`[TaskCenter] ✅ 使用中文标题: "${baseTitle}"`);
+          }
+        } catch (error) {
+          console.error(`[TaskCenter] ❌ i18nContent 解析失败:`, error);
+          // 解析失败时使用原 title
+        }
+      }
+
+      if (!baseTitle) return "";
+
+      // 2️⃣ 检查标题中是否包含括号格式的进度信息，如 "(0/5)" 或 "(4/5)"
       const progressPattern = /\((\d+)\/(\d+)\)/;
-      const match = task.title.match(progressPattern);
+      const match = baseTitle.match(progressPattern);
 
       if (match) {
         // 如果标题中包含进度格式，使用全局的 progress 和 targetCount 替换
-        const progress = task.progress || 0; // 全局任务进度
+        const progress = task.progress || 0; // 用户完成进度
         const targetCount = task.targetCount || parseInt(match[2]) || 1;
 
         // 替换括号中的进度
-        return task.title.replace(
+        const newTitle = baseTitle.replace(
           progressPattern,
           `(${progress}/${targetCount})`
         );
+        console.log(`[TaskCenter] ✅ 替换后标题: "${newTitle}"`);
+        return newTitle;
       }
 
-      // 如果标题中没有进度格式，但任务有 targetCount > 1，则添加进度显示
+      // 3️⃣ 如果标题中没有进度格式，但任务有 targetCount > 1，则添加进度显示
       if (task.targetCount && task.targetCount > 1) {
         const progress = task.progress || 0;
-        return `${task.title} (${progress}/${task.targetCount})`;
+        const newTitle = `${baseTitle} (${progress}/${task.targetCount})`;
+        console.log(`[TaskCenter] ✅ 添加进度后标题: "${newTitle}"`);
+        return newTitle;
       }
 
-      // 如果没有进度格式且 targetCount = 1，直接返回原标题
-      return task.title;
+      // 4️⃣ 如果没有进度格式且 targetCount = 1，直接返回标题
+      console.log(`[TaskCenter] ✅ 保持标题: "${baseTitle}"`);
+      return baseTitle;
     },
 
     // 处理任务点击事件
@@ -647,19 +689,38 @@ export default {
             console.log("[TaskCenter] 🔄 已清空旧任务列表，开始填充新数据...");
 
             res.data.forEach(task => {
+              console.log(
+                `[TaskCenter] 📊 处理任务数据: ID=${task.id}, title="${
+                  task.title
+                }", userProgress=${task.userProgress}, completedCount=${
+                  task.completedCount
+                }, targetCount=${task.targetCount}, isCompleted=${
+                  task.isCompleted
+                }`
+              );
+
               const taskItem = {
                 id: task.id,
                 icon: task.icon || this.getDefaultIcon(task.taskTypeId),
                 title: task.title,
+                i18nContent: task.i18nContent || null, // ✅ 添加 i18nContent 字段
                 reward: task.rewardPoints,
                 isCompleted: task.isCompleted || false, // 按钮状态：是否完成
-                completedCount: task.completedCount || 0, // 用户个人完成次数
-                progress: task.progress || 0, // 全局任务进度（用于标题显示）
+                completedCount: task.userProgress || task.completedCount || 0, // 用户个人完成次数（用于标题显示）
+                progress: task.userProgress || task.completedCount || 0, // 用户完成进度（用于标题显示）
                 targetCount: task.targetCount || 1, // 目标完成次数
                 jumpUrl: task.jumpUrl || "",
                 pageDuration: task.pageDuration || 0,
                 description: task.description || ""
               };
+
+              console.log(
+                `[TaskCenter] 📦 构建的taskItem: ID=${taskItem.id}, progress=${
+                  taskItem.progress
+                }, targetCount=${taskItem.targetCount}, completedCount=${
+                  taskItem.completedCount
+                }`
+              );
 
               // 根据 taskTypeId 分类
               if (task.taskTypeId === 1) {
@@ -937,9 +998,11 @@ export default {
               id: task.id,
               icon: task.icon || this.getDefaultIcon(task.taskTypeId),
               title: task.title,
+              i18nContent: task.i18nContent || null, // ✅ 添加 i18nContent 字段
               reward: task.rewardPoints,
               isCompleted: task.isCompleted || false,
-              completedCount: task.completedCount || 0,
+              completedCount: task.userProgress || task.completedCount || 0,
+              progress: task.userProgress || task.completedCount || 0, // 用户完成进度（用于标题显示）
               targetCount: task.targetCount || 0,
               jumpUrl: task.jumpUrl || "",
               pageDuration: task.pageDuration || 0,
