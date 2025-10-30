@@ -13,7 +13,7 @@ module.exports = {
       // 注意：更具体的路径必须放在通配符之前！
       "/api/offerwall": {
         // 积分墙任务接口 → 3000端口
-        target: "http://localhost:3000",
+        target: "http://192.168.6.235:3000",
         changeOrigin: true,
         pathRewrite: {
           "^/api/offerwall": "/api/offerwall"
@@ -21,7 +21,7 @@ module.exports = {
       },
       "/api": {
         // 电影项目接口 → 4000端口
-        target: "http://localhost:4000",
+        target: "http://192.168.6.235:4000",
         changeOrigin: true
       }
     },
@@ -55,7 +55,7 @@ module.exports = {
     // Paths
     assetsRoot: path.resolve(__dirname, "../dist"),
     assetsSubDirectory: "static",
-    assetsPublicPath: "/",
+    assetsPublicPath: "./",
 
     /**
      * Source Maps

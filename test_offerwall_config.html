@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>测试积分墙配置API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+      .section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9;
+        border-left: 4px solid #007bff;
+      }
+      .label {
+        font-weight: bold;
+        color: #555;
+        margin-right: 10px;
+      }
+      .value {
+        color: #333;
+        font-family: monospace;
+      }
+      .color-preview {
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+        border: 1px solid #ccc;
+        vertical-align: middle;
+        margin-left: 10px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .error {
+        color: red;
+        padding: 10px;
+        background: #ffe6e6;
+        border-radius: 5px;
+      }
+      pre {
+        background: #2d2d2d;
+        color: #f8f8f2;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 积分墙配置API测试</h1>
+
+      <button onclick="testAPI()">🚀 测试 /api/offerwall/config 接口</button>
+
+      <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+      async function testAPI() {
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "<p>⏳ 正在请求...</p>";
+
+        try {
+          const response = await fetch("/api/offerwall/config", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({})
+          });
+
+          const data = await response.json();
+
+          console.log("API响应:", data);
+
+          if (data.code === 200 && data.data) {
+            const config = data.data;
+
+            let html = "<h2>✅ 配置加载成功</h2>";
+
+            // 显示任务条目背景色
+            if (config.adSection && config.adSection.taskCard) {
+              const bgColor = config.adSection.taskCard.backgroundColor;
+              html += `
+              <div class="section">
+                <h3>📦 任务卡片配置 (taskCard)</h3>
+                <p>
+                  <span class="label">backgroundColor:</span>
+                  <span class="value">${bgColor}</span>
+                  <span class="color-preview" style="background-color: ${bgColor};"></span>
+                </p>
+              </div>
+            `;
+            } else {
+              html +=
+                '<div class="error">❌ 未找到 adSection.taskCard 配置</div>';
+            }
+
+            // 显示全局配置
+            if (config.global) {
+              html += `
+              <div class="section">
+                <h3>🌍 全局配置 (global)</h3>
+                <p>
+                  <span class="label">bottomBackground:</span>
+                  <span class="value">${config.global.bottomBackground ||
+                    "未设置"}</span>
+                  ${
+                    config.global.bottomBackground
+                      ? `<span class="color-preview" style="background-color: ${
+                          config.global.bottomBackground
+                        };"></span>`
+                      : ""
+                  }
+                </p>
+              </div>
+            `;
+            }
+
+            // 显示完整响应
+            html += `
+            <div class="section">
+              <h3>📋 完整响应数据</h3>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </div>
+          `;
+
+            resultDiv.innerHTML = html;
+          } else if (data.code === 200 && !data.data) {
+            resultDiv.innerHTML =
+              '<div class="error">⚠️ 数据库中没有配置数据</div>';
+          } else {
+            resultDiv.innerHTML = `<div class="error">❌ 响应异常: ${data.message ||
+              "未知错误"}</div>`;
+          }
+        } catch (error) {
+          console.error("请求失败:", error);
+          resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${
+            error.message
+          }</div>`;
+        }
+      }
+
+      // 页面加载时自动测试
+      window.onload = function() {
+        testAPI();
+      };
+    </script>
+  </body>
+</html>

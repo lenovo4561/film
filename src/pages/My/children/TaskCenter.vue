@@ -283,34 +283,21 @@ export default {
       );
     },
 
-    // 任务条目背景样式
+    // 任务条目背景样式（动态获取 taskCard.backgroundColor）
     taskItemStyle() {
-      // 优先使用 global.bottomBackground，如果没有则使用 taskCard.backgroundColor
-      if (
-        this.offerwallConfig &&
-        this.offerwallConfig.global &&
-        this.offerwallConfig.global.bottomBackground
-      ) {
-        return {
-          backgroundColor: this.offerwallConfig.global.bottomBackground
-        };
-      }
+      const backgroundColor =
+        this.offerwallConfig?.adSection?.taskCard?.backgroundColor || "#16213e";
 
-      // 降级方案：使用 taskCard.backgroundColor
-      if (
-        this.offerwallConfig &&
-        this.offerwallConfig.adSection &&
-        this.offerwallConfig.adSection.taskCard
-      ) {
-        const taskCard = this.offerwallConfig.adSection.taskCard;
-        return {
-          backgroundColor: taskCard.backgroundColor
-        };
-      }
+      console.log("[taskItemStyle] 计算背景色:", {
+        offerwallConfig: !!this.offerwallConfig,
+        adSection: !!this.offerwallConfig?.adSection,
+        taskCard: !!this.offerwallConfig?.adSection?.taskCard,
+        backgroundColor: backgroundColor,
+        原始值: this.offerwallConfig?.adSection?.taskCard?.backgroundColor
+      });
 
-      // 默认背景色
       return {
-        backgroundColor: "#16213e"
+        backgroundColor
       };
     },
 
@@ -543,76 +530,60 @@ export default {
 
     // 在指定浏览器中打开链接
     openInBrowser(url) {
-      // 检测操作系统
-      const isWindows = navigator.platform.indexOf("Win") > -1;
-      const isMac = navigator.platform.indexOf("Mac") > -1;
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      console.log("[TaskCenter] 打开外部浏览器链接:", url);
 
-      console.log("[TaskCenter] 打开链接:", url);
-      console.log("[TaskCenter] 系统信息:", {
-        isWindows,
-        isMac,
-        isAndroid,
-        isIOS
+      // 检测是否在 HBuilderX 打包的 APP 环境（5+ Runtime）
+      const isInApp = typeof plus !== "undefined";
+
+      console.log("[TaskCenter] 环境信息:", {
+        isInApp,
+        hasPlusRuntime: typeof plus !== "undefined",
+        userAgent: navigator.userAgent
       });
 
-      // 尝试使用不同的方案
-      if (isWindows) {
-        // Windows系统 - 尝试使用Edge浏览器的URL Scheme
-        // microsoft-edge: 协议可以在Windows 10+上启动Edge浏览器
-        const edgeUrl = `microsoft-edge:${url}`;
-        console.log("[TaskCenter] 尝试使用Edge打开:", edgeUrl);
+      // HBuilderX APP 环境 - 使用 plus.runtime.openURL 打开外部浏览器
+      if (isInApp && plus && plus.runtime) {
+        console.log(
+          "[TaskCenter] ✅ HBuilderX APP 环境 - 使用 plus.runtime.openURL 打开外部浏览器"
+        );
+        try {
+          // plus.runtime.openURL() 会调用系统默认浏览器打开链接
+          plus.runtime.openURL(url, function(error) {
+            console.error("[TaskCenter] ❌ 打开外部浏览器失败:", error);
+            Toast({
+              message: "打开浏览器失败",
+              position: "middle",
+              duration: 2000
+            });
+          });
 
-        // 创建一个隐藏的iframe尝试打开Edge
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = edgeUrl;
-        document.body.appendChild(iframe);
+          Toast({
+            message: "正在打开外部浏览器...",
+            position: "middle",
+            duration: 1500
+          });
 
-        // 等待一段时间，如果Edge没有打开，使用默认浏览器
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          // 如果Edge无法打开，降级到默认浏览器
-          if (document.hidden) {
-            console.log("[TaskCenter] Edge已打开");
-          } else {
-            console.log("[TaskCenter] Edge无法打开，使用默认浏览器");
-            window.open(url, "_blank");
-          }
-        }, 500);
-      } else if (isAndroid) {
-        // Android系统 - 可以尝试使用Chrome的intent
-        const intent = `intent://${url.replace(
-          /^https?:\/\//,
-          ""
-        )}#Intent;scheme=https;package=com.android.chrome;end`;
-        console.log("[TaskCenter] Android - 尝试使用Chrome打开");
-
-        // 先尝试Chrome
-        window.location.href = intent;
-
-        // 备用方案
-        setTimeout(() => {
-          if (document.hidden) {
-            console.log("[TaskCenter] Chrome已打开");
-          } else {
-            console.log("[TaskCenter] Chrome无法打开，使用默认浏览器");
-            window.open(url, "_blank");
-          }
-        }, 500);
-      } else {
-        // 其他系统（Mac, iOS等）- 直接使用默认浏览器或window.open
-        console.log("[TaskCenter] 使用默认方式打开链接");
-
-        // 尝试在新窗口打开
-        const opened = window.open(url, "_blank");
-
-        // 如果window.open被阻止，使用location.href
-        if (!opened) {
-          console.log("[TaskCenter] window.open被阻止，使用location.href");
-          window.location.href = url;
+          return;
+        } catch (error) {
+          console.error(
+            "[TaskCenter] ❌ plus.runtime.openURL 调用失败:",
+            error
+          );
+          // 继续执行降级方案
         }
+      }
+
+      // 浏览器环境 - 使用 window.open
+      console.log("[TaskCenter] 🌐 浏览器环境 - 使用 window.open 打开链接");
+      const opened = window.open(url, "_blank");
+
+      // 如果 window.open 被阻止，提示用户
+      if (!opened) {
+        Toast({
+          message: "请允许打开新窗口",
+          position: "middle",
+          duration: 2000
+        });
       }
     },
 
@@ -759,13 +730,13 @@ export default {
         } else if (res.code === 200) {
           // 状态码 200 但 message 不是 "ok"，可能是时间不足等情况
           Toast({
-            message: res.message || "任务未完成",
+            message: res.message || "未达到完成条件",
             position: "middle",
             duration: 2000
           });
         } else {
           Toast({
-            message: res.message || "任务验证失败",
+            message: res.message || "未达到完成条件",
             position: "middle",
             duration: 2000
           });
@@ -1547,7 +1518,7 @@ export default {
 
     .task-list
       .task-item
-        background-color #16213e
+        // background-color 由 :style="taskItemStyle" 动态控制
         border-radius .3rem
         padding .3rem
         margin-bottom .2rem
